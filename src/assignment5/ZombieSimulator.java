@@ -25,18 +25,30 @@ public class ZombieSimulator {
 
 	public static final double RANDOM_DELTA_HALF_RANGE = 0.006;
 
-	
-
 	/**
 	 * Read entities from a file.
 	 */
 	public static void readEntities(Scanner in, boolean[] areZombies, double[][] positions) {
 
-		// TODO: Implement this function 
-		// (you can probably adjust code from Assignment 4)
+		for (int i = 0; i < areZombies.length; i++) {
+        // Read whether the entity is a zombie
+        	String type = in.next(); // "Zombie" or "Nonzombie"
+        	if (type.equals(ZOMBIE_TOKEN_VALUE)) {
+            	areZombies[i] = true;
+       		} 
+			else {
+            	areZombies[i] = false;
+        	}
 
-		
-	}
+        	// Read x and y positions
+			double xPosition = in.nextDouble();
+			double yPosition = in.nextDouble();
+
+			// Store positions
+			positions[i][X] = xPosition;
+			positions[i][Y] = yPosition;
+		}
+	}	
 
 	/**
 	 * Draw all the entities. Zombies are drawn as ZOMBIE_COLOR filled circles of
@@ -51,10 +63,24 @@ public class ZombieSimulator {
 		// DONE: Clear the frame
 		StdDraw.clear();
 
-		// TODO: Write the loop that displays all the entities 
-		// (you can probably adjust code from Assignment 4)
-
-		
+		for (int i = 0; i < areZombies.length; i++) {
+			if (areZombies[i]) {
+				StdDraw.setPenColor(ZOMBIE_COLOR);
+				double xPosition = positions[i][X];  // column 0
+        		double yPosition = positions[i][Y];  // column 1
+				StdDraw.filledCircle(xPosition, yPosition, ENTITY_RADIUS);
+			}
+			else {
+				StdDraw.setPenColor(NONZOMBIE_COLOR);
+				double xPosition = positions[i][X];  // column 0
+        		double yPosition = positions[i][Y];  // column 1
+				StdDraw.filledCircle(xPosition, yPosition, ENTITY_RADIUS);
+			}
+		}
+		StdDraw.setPenColor(TEXT_COLOR);
+		int nonzombies = nonzombieCount(areZombies);
+		int total = areZombies.length;
+		StdDraw.text(0.1, 0.98, nonzombies + "/" + total);
 
 		// DONE: Show everything that was drawn (show the updated frame). This should be
 		// the only "show()" command!
@@ -73,11 +99,19 @@ public class ZombieSimulator {
 	 * @return true if the entity at index is touching a zombie, false otherwise
 	 */
 	public static boolean touchingZombie(int index, boolean[] areZombies, double[][] positions) {
-		// TODO: Complete this method
-
-		
-
-		return false; // FIXME: Replace this so it returns the value of interest
+		double x1 = positions[index][X];
+    	double y1 = positions[index][Y];
+		for (int i = 0; i < areZombies.length; i++) {
+			if (areZombies[i]) {
+				double x2 = positions[i][X];
+                double y2 = positions[i][Y];
+				double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+				if (distance <= 2 * ENTITY_RADIUS) {
+                    return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -101,45 +135,85 @@ public class ZombieSimulator {
 	 * @param positions  the (x,y) position of each entity
 	 */
 	public static void updateEntities(boolean[] areZombies, double[][] positions) {
-		// TODO: Complete this method: It should update the positions of items in the
-		// entities array
+		int n = areZombies.length;
 
-		
-	}
+    	// 1) Move everyone with Brownian motion
+    	for (int i = 0; i < n; i++) {
+        	// random in [-RANDOM_DELTA_HALF_RANGE, +RANDOM_DELTA_HALF_RANGE]
+        	double dx = (Math.random() * 2.0 - 1.0) * RANDOM_DELTA_HALF_RANGE;
+        	double dy = (Math.random() * 2.0 - 1.0) * RANDOM_DELTA_HALF_RANGE;
+       		positions[i][X] += dx;
+       		positions[i][Y] += dy;
 
-	
+        	// 2) Clamp to [0,1]
+			if (positions[i][X] < 0.0) {
+				positions[i][X] = 0.0;
+			} 
+			else if (positions[i][X] > 1.0) {
+				positions[i][X] = 1.0;
+			}
+			if (positions[i][Y] < 0.0) {
+				positions[i][Y] = 0.0;
+			}
+			else if (positions[i][Y] > 1.0) {
+				positions[i][Y] = 1.0;
+			}
+    	}
+
+    	// 3) Determine infections
+    	boolean[] willTurn = new boolean[n];
+    	for (int i = 0; i < n; i++) {
+        	if (!areZombies[i]) { // only non-zombies can turn
+            	if (touchingZombie(i, areZombies, positions)) {
+                	willTurn[i] = true;
+            	}
+        	}
+    	}
+
+    	// Apply flips after the checks
+    	for (int i = 0; i < n; i++) {
+       		if (willTurn[i]) {
+            	areZombies[i] = true;
+        	}
+    	}
+	}	
 
 	/**
 	 * Return the number of nonzombies remaining
 	 */
-	// TODO: Change TodoReplaceWithCorrectReturnType to appropriate return type.
-	// TODO: Change TodoReplaceWithCorrectParameterType to appropriate parameter type.
-	// TODO: Rename todoRenameMe.
-	// public static TodoReplaceWithCorrectReturnType nonzombieCount(TodoReplaceWithCorrectParameterType todoRenameMe) {
-	//     TODO: complete this method
-	// }
+
+	public static int nonzombieCount(boolean[] areZombies) {		
+		int count = 0;
+    	for (int i = 0; i < areZombies.length; i++) {
+        	if (!areZombies[i]) {   // if it's NOT a zombie
+            	count++;
+        	}
+    	}
+    	return count;
+	}
 
 	/**
 	 * Run the zombie simulation.
 	 */
 	private static void runSimulation(Scanner in) {
 		StdDraw.enableDoubleBuffering(); // reduce unpleasant drawing artifacts, speed things up
-
-		// TODO: Uncomment and fix the code below.
-		// int N = TODO;
-		// boolean[] areZombies = TODO;
-		// double[][] positions = TODO;
-		// readEntities(ap, areZombies, positions);
-		// drawEntities(areZombies, positions);
-		
+		int N = in.nextInt();
+		boolean[] areZombies = new boolean[N];
+		double[][] positions = new double[N][2];
+		readEntities(in, areZombies, positions);
+		drawEntities(areZombies, positions);
 		StdDraw.pause(500);
 
-		// TODO: Write the loop that will run the simulation.
 		// Continue if nonzombies remain
 		// Update zombie state and positions
 		// Redraw
-		
+		while (nonzombieCount(areZombies) > 0) {   // keep going while humans remain
+			updateEntities(areZombies, positions); // move + infect
+			drawEntities(areZombies, positions);   // redraw
+			StdDraw.pause(20);  
+		}
 	}
+
 
 	public static void main(String[] args) throws FileNotFoundException {
 		JFileChooser chooser = new JFileChooser("zombieSims");
